@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+config.toml
+.session-secret
+.auth-generated
+*.bak
+.DS_Store
+node_modules/

@@ -1,0 +1,59 @@
+# burndeck configuration
+#
+# Copy to config.toml next to app.py (or point BURNDECK_CONFIG at it).
+# Everything here is optional — with no config at all, burndeck serves on
+# 127.0.0.1:8801, auto-discovers local OpenAI-compatible model servers, and
+# generates login credentials on first boot (printed once, stored 0600 in
+# .auth-generated).
+#
+# Precedence: BURNDECK_* environment variables > this file > built-in defaults.
+
+[server]
+host = "127.0.0.1"   # bind address; put nginx/caddy in front for TLS (deploy/nginx.conf)
+port = 8801
+
+[auth]
+enabled = true
+user = "operator"
+password_sha256 = ""  # scripts/hash_password.py — empty means credentials are generated on first boot
+# password = ""       # plain-text alternative (discouraged; password_sha256 wins if both set)
+
+[polling]
+gpu_seconds = 0.25      # GPU tile refresh (NVML makes 4 Hz cheap, even at 8 GPUs)
+llm_seconds = 1.0       # endpoint probe cadence
+history_seconds = 1.0   # chart sampling cadence
+history_points = 180    # chart window length (180 x 1 s = 3 min)
+
+[models]
+# Directories scanned for HF-style model folders (config.json) so served
+# models get architecture/quant/context intel on their cards.
+roots = ["/models"]
+
+# Model servers to probe for TPS, KV cache, and queue depth. Zero entries is
+# fine: any local process holding weights on a GPU is sniffed automatically,
+# and every port speaking the OpenAI API is scraped without configuration.
+# Declare endpoints only to pin labels, accents, or GPU attribution.
+#
+# [[endpoints]]
+# id = "vllm-main"
+# url = "http://127.0.0.1:8000"
+# label = "Qwen3-235B · vLLM"
+# gpus = [0, 1, 2, 3, 4, 5, 6, 7]   # optional; empty = attribute by process
+# accent = "#45d1ff"                # optional; cards cycle a palette otherwise
+# accent2 = "#8b7cff"
+
+[metrics]
+enabled = true   # GET /metrics — Prometheus text format
+public = true    # false = require the dashboard session cookie
+
+[alerts]
+webhook = ""     # Discord webhook URL (or Slack/generic — see `format`); empty = off
+format = "discord"                  # discord | slack | json
+events = ["gpu_hot", "gpu_vram", "power_ceiling", "model_health", "pcie", "aer_fatal", "queue"]
+gpu_hot_c = 83.0
+vram_pct = 96.0
+power_pct = 95.0
+cooldown_seconds = 300.0
+
+[demo]
+mock_gpus = 0    # N > 0 boots a synthetic N-GPU rig — no NVML, no probes (try 8)

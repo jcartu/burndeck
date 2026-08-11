@@ -1,0 +1,11 @@
+{
+  "name": "burndeck",
+  "short_name": "burndeck",
+  "description": "GPU + LLM telemetry",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "background_color": "#030811",
+  "theme_color": "#030811",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

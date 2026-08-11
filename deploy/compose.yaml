@@ -1,0 +1,46 @@
+# Burndeck dashboard -- compose for a GPU host.
+#
+# From the repo root:
+#   docker compose -f deploy/compose.yaml up -d --build
+#
+# Requires nvidia-container-toolkit so the container can see host GPUs via
+# NVML. On a machine with no NVIDIA hardware, use the mock-mode variant shown
+# at the bottom of this file instead.
+
+services:
+  burndeck:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    # NVML needs the NVIDIA container runtime; without it the app serves an
+    # empty GPU set (it does not crash).
+    gpus: all
+    # Required: the model sniffer maps GPU stats to host processes via /proc,
+    # which needs a shared PID namespace.
+    pid: host
+    ports:
+      - "8801:8801"
+    volumes:
+      # Optional but recommended: mount your generated config read-only. If this
+      # file is absent the container falls back to the example baked into the image.
+      - ./config.toml:/app/config.toml:ro
+      # Optional: expose local model directories so model cards resolve.
+      # - /path/to/models:/models:ro
+    # Point the sniffer at mounted model roots (colon-separated), e.g.:
+    # environment:
+    #   - BURNDECK_MODEL_ROOTS=/models
+    restart: unless-stopped
+
+# --- Mock-mode variant (no GPU / no host PID namespace) -----------------------
+# Swap the service above for this block on a GPU-less box to run the synthetic
+# 8-GPU rig -- handy for demos and CI:
+#
+#   burndeck:
+#     build:
+#       context: .
+#       dockerfile: deploy/Dockerfile
+#     ports:
+#       - "8801:8801"
+#     environment:
+#       - BURNDECK_MOCK_GPUS=8
+#     restart: unless-stopped
