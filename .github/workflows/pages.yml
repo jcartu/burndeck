@@ -17,12 +17,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Stage static assets
-        # index.html lives at the site root; every asset it references keeps
-        # its static/ prefix, exactly as when app.py serves it.
+        # index.html and login.html live at the site root; every asset they
+        # reference keeps its static/ prefix, exactly as when app.py serves it.
+        # login.html on Pages is a visual preview (there is no backend to auth).
         run: |
           mkdir -p _site/static
           cp -r static/* _site/static/
           cp static/index.html _site/index.html
+          cp static/login.html _site/login.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
