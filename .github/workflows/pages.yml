@@ -17,9 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Stage static assets
+        # index.html lives at the site root; every asset it references keeps
+        # its static/ prefix, exactly as when app.py serves it.
         run: |
-          mkdir -p _site
-          cp -r static/* _site/
+          mkdir -p _site/static
+          cp -r static/* _site/static/
+          cp static/index.html _site/index.html
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
