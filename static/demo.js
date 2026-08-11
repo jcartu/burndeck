@@ -180,6 +180,24 @@ window.BurndeckDemo = (() => {
     return [s];
   }
 
+  /* Mirror build_snapshot's per-GPU TPS attribution: each model's rate is
+     split evenly across its GPUs, and the model chips ride along. */
+  function attachTps(gs, ms){
+    const per = new Map(gs.map(g => [g.index, { input: 0, output: 0, total: 0, models: [] }]));
+    for (const m of ms){
+      if (!m.healthy) continue;
+      const idxs = m.gpu_indices.filter(i => per.has(i));
+      for (const i of idxs){
+        const t = per.get(i);
+        t.input += m.input_tps / idxs.length;
+        t.output += m.output_tps / idxs.length;
+        t.total += m.total_tps / idxs.length;
+        t.models.push({ id: m.id, label: m.label, names: m.model_names, accent: m.accent });
+      }
+    }
+    for (const g of gs) g.tps = per.get(g.index);
+  }
+
   function totalsState(gpus, models){
     const tps = models.reduce((a, m) => a + m.total_tps, 0);
     return {
@@ -221,6 +239,7 @@ window.BurndeckDemo = (() => {
       hist.power_total.push(ts.power_draw_w);
     }
     const models = modelStates(t, n);
+    attachTps(gpus, models);
     const totals = totalsState(gpus, models);
     totals.history = hist;
     ingest({
@@ -238,6 +257,7 @@ window.BurndeckDemo = (() => {
       const tc = now();
       const gs = Array.from({ length: n }, (_, i) => gpuState(i, tc, n));
       const ms = modelStates(tc, n);
+      attachTps(gs, ms);
       const ts = totalsState(gs, ms);
       const frame = {
         type: 'update',
