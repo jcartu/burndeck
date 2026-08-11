@@ -26,7 +26,14 @@
       this.idleDelay = opts.idleDelay || 4000;
       this.quality = Math.min(1, Math.max(0.25, opts.quality || 0.35));
       this.maxPixels = opts.maxPixels || 1200000;
-      this.gl = canvas.getContext('webgl', { antialias:false, alpha:false, preserveDrawingBuffer:!!opts.preserve });
+      this._base = { fps: this.fps, idleFps: this.idleFps, quality: this.quality };
+      this._lite = false;
+      /* high-performance: dual-GPU MacBooks must not land on the iGPU.
+         depth/stencil off: a fullscreen quad needs neither.
+         desynchronized: lets Chromium skip a compositor copy where supported. */
+      this.gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false,
+        stencil: false, powerPreference: 'high-performance', desynchronized: true,
+        preserveDrawingBuffer: !!opts.preserve });
       if (!this.gl) throw new Error('no-webgl');
       /* survive GPU-process resets / driver fallbacks: rebuild GL state on restore */
       this._lost = false;
@@ -204,6 +211,19 @@
       const next = Math.min(1, Math.max(0, v));
       if (Math.abs(next - this._heatTarget) >= 0.12) this._wake(1800);
       this._heatTarget = next;
+    }
+    /* lite tier: cheaper pixel budget + lower fps caps for struggling
+       compositors — engaged by the dashboard's performance governor. */
+    setLite(on){
+      on = !!on;
+      if (this._lite === on) return;
+      this._lite = on;
+      this.fps = on ? Math.min(this._base.fps, 12) : this._base.fps;
+      this.frameInterval = 1000 / this.fps;
+      this.idleFps = Math.min(this.fps, on ? 5 : this._base.idleFps);
+      this.idleFrameInterval = 1000 / this.idleFps;
+      this.quality = on ? Math.max(0.2, this._base.quality * 0.6) : this._base.quality;
+      this._resize();
     }
     frame(now = performance.now()){
       if (this._lost) return;

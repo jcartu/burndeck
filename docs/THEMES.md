@@ -168,7 +168,7 @@ The `login` object controls all copy on the login card. Every field is in-univer
 
 ### Perf block (optional)
 
-The optional `perf` object is merged into the WallpaperRunner options by `index.html` and `login.html`. Runner defaults are `fps 18`, `idleFps 6`, `quality 0.35`. Declare `perf` only to run cheaper — for example, tokyo declares `{ fps: 14, idleFps: 4, quality: 0.30 }`.
+The optional `perf` object is merged into the WallpaperRunner options by `index.html` and `login.html`. Runner defaults are `fps 18`, `idleFps 6`, `quality 0.35`. Declare `perf` only to run cheaper — for example, tokyo declares `{ fps: 14, idleFps: 4, quality: 0.30 }`. Note the dashboard's performance governor may additionally cap fps at 12 and scale `quality` by 0.6 (lite tier) on struggling machines — themes should still read correctly under that budget.
 
 ### Shader contract (WebGL1 / GLSL ES 1.00 — no `#version`, no dFdx unless you enable the ext, loops must have constant bounds)
 

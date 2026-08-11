@@ -84,6 +84,10 @@ session cookie returns 401. That is correct behavior, not a failure.
   shipping UI changes.
 - The frontend uses only RELATIVE paths (`static/...`, `api/...`) so it works
   at `/`, behind sub-path proxies, and on GitHub Pages. Keep it that way.
+- "Dashboard is slow" reports: the client has an adaptive lite tier
+  (`?lite=1` to force, `?lite=0` to forbid, `L` key, localStorage key
+  `burndeck-perf`). Rendering is already GPU-backed (Metal/D3D/GL via the
+  browser); lite disables backdrop blur and shrinks the wallpaper budget.
 
 ## CI / Pages
 

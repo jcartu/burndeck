@@ -56,6 +56,9 @@ fill-rate telemetry, and the event ticker narrating a throughput surge.*
   model online/offline, TPS records.
 - Density mode: compact tiles engage automatically at 6+ GPUs. Eight
   full-size cards is a scrolling documentary; density mode is the trailer.
+- Adaptive performance governor: if your browser can't composite frosted
+  glass over a live wallpaper (looking at you, Safari on a 5K display), the
+  deck notices the jank and drops to a flat-glass lite tier by itself.
 - Installable PWA, wake-lock in fullscreen, touch and foldable friendly —
   candybar, unfolded, portrait, or wall-mounted TV.
 
@@ -94,6 +97,7 @@ log, and kept in `.auth-generated` (0600).
 | `S` (or click the theme button) | open the theme menu |
 | `1`–`9`, `0` | jump straight to a theme |
 | `D` (or ▦) | toggle density mode |
+| `L` | toggle lite tier (flat glass, cheaper wallpaper — auto-engages on jank) |
 | `F` (or ⛶) | fullscreen + screen wake-lock |
 | `Esc` | close the theme menu |
 
@@ -175,6 +179,28 @@ contract, SSE full-snapshot + delta frames, Prometheus gauges, and an actual
 webhook delivery into a local sink. If it prints `smoke: PASS`, the whole
 pipeline works on your machine. How it all fits together:
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Performance
+
+"Can it use Metal?" It already does. Browsers don't expose Metal to pages,
+but WebGL is Metal-backed on macOS (WebKit natively, Chrome through ANGLE),
+D3D11-backed on Windows, and GL/Vulkan on Linux — the wallpapers have been
+running on your GPU the whole time. What actually makes a Mac chug is the
+compositing around them, so burndeck budgets everything:
+
+- The wallpaper renders at ≤18 fps into a pixel budget (≤1.2 MP, DPR capped
+  at 1.5), idles at 6 fps after a few seconds without events, and fully
+  pauses in hidden tabs. Contexts request the high-performance GPU — Intel
+  dual-GPU MacBooks stop landing on the iGPU.
+- Chart glow is a stroked underlay, not Canvas2D `shadowBlur` (CPU-rasterized
+  and brutal in Safari at retina resolution).
+- The governor times real frame delivery on its own renders; ~5 s of
+  sustained compositor lag flips on the lite tier (no backdrop blur, no
+  shimmer, smaller shader budget) and says so in the ticker. Override any
+  time: `L`, `?lite=1` / `?lite=0`, persisted per browser.
+
+If it is still slow after lite, the tab is fine and the machine is lying to
+you about something else.
 
 ## Security model
 

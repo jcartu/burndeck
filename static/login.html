@@ -45,7 +45,7 @@ body.light .scan{opacity:.1}
 
 .card{
   position:relative;z-index:5;width:min(430px,92vw);
-  background:var(--panel);backdrop-filter:blur(24px) saturate(1.35);
+  background:var(--panel);backdrop-filter:blur(24px) saturate(1.35);-webkit-backdrop-filter:blur(24px) saturate(1.35);
   border:1px solid rgba(var(--accent-rgb),0.28);border-radius:var(--radius);
   padding:clamp(22px,6vw,34px) clamp(20px,7vw,36px) clamp(18px,5vw,26px);
   box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 60px rgba(var(--accent-rgb),calc(.14*var(--glow)));
@@ -135,9 +135,9 @@ body.light button{color:#f8f5ee}
 </div>
 <div class="hint"><span class="no-touch">press <b>W</b> to shift interface</span><span class="on-touch">tap <b>interface</b> to shift</span></div>
 
-<script src="static/themes/runner.js?v=20260811b"></script>
+<script src="static/themes/runner.js?v=20260811c"></script>
 <script>
-const ASSET_VER = '20260811b';
+const ASSET_VER = '20260811c';
 const THEME_ORDER = ['oblivion','ares','k2049','muthur','jarvis','nightcity','arrakis','lumon','apex','construct','gargantua','thegrid','tokyo'];
 const hexRgb = (h) => [0,2,4].map(i=>parseInt(h.replace('#','').slice(i,i+2),16)).join(',');
 let runner = null, bootTimer = null, currentId = null;
