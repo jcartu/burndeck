@@ -13,6 +13,10 @@ designed to scale to TP8 rigs and beyond.
 [16 GPUs](https://jcartu.github.io/burndeck/?gpus=16) ·
 [single card](https://jcartu.github.io/burndeck/?gpus=1)
 
+[![burndeck — 8-GPU rig, STARK HUD theme, density mode](docs/shots/hero.webp)](https://jcartu.github.io/burndeck/?gpus=8)
+*An 8-GPU tensor-parallel rig on one screen: live tok/s, a model mid-load with
+fill-rate telemetry, and the event ticker narrating a throughput surge.*
+
 ## Features
 
 **GPU telemetry**
@@ -112,7 +116,9 @@ Reading the dials:
 
 The login screen is themed too — every theme brings its own operator labels
 and boot log, so logging in feels like clocking into a different facility
-each time.
+each time. MU/TH/UR asks for a crew ID and an override code:
+
+[![themed login — MU/TH/UR 6000](docs/shots/login-muthur.webp)](docs/THEMES.md)
 
 ## Deploy
 
@@ -181,13 +187,22 @@ false` to gate it). Nothing phones home.
 
 ## Themes
 
-`oblivion · ares · k2049 · muthur · jarvis · nightcity · arrakis · lumon ·
-apex · construct · gargantua · thegrid · tokyo`
+Thirteen shader wallpapers, each with its own palette, fonts, and login
+flavor. Live shots from the demo rig:
 
-Palettes and flavor text in the [gallery](docs/THEMES.md), which also
-documents the shader contract (`u_drive`, `u_heat`, `u_energy`, …) if you
-want to write your own. A theme is a single JS file; PRs welcome, luma
+| | | |
+|:---:|:---:|:---:|
+| [![SKYTOWER](docs/shots/oblivion.webp)](docs/shots/oblivion.webp)<br>**SKYTOWER** · Oblivion | [![THE GRID](docs/shots/ares.webp)](docs/shots/ares.webp)<br>**THE GRID** · Tron: Ares | [![WALLACE ARCHIVE](docs/shots/k2049.webp)](docs/shots/k2049.webp)<br>**WALLACE ARCHIVE** · Blade Runner 2049 |
+| [![MU/TH/UR 6000](docs/shots/muthur.webp)](docs/shots/muthur.webp)<br>**MU/TH/UR 6000** · Alien | [![STARK HUD](docs/shots/jarvis.webp)](docs/shots/jarvis.webp)<br>**STARK HUD** · J.A.R.V.I.S. *(default)* | [![NIGHT CITY](docs/shots/nightcity.webp)](docs/shots/nightcity.webp)<br>**NIGHT CITY** · Cyberpunk 2077 |
+| [![ARRAKIS](docs/shots/arrakis.webp)](docs/shots/arrakis.webp)<br>**ARRAKIS** · Dune | [![MACRODATA](docs/shots/lumon.webp)](docs/shots/lumon.webp)<br>**MACRODATA** · Severance | [![APEX TELEMETRY](docs/shots/apex.webp)](docs/shots/apex.webp)<br>**APEX TELEMETRY** · F1 pit wall |
+| [![THE CONSTRUCT](docs/shots/construct.webp)](docs/shots/construct.webp)<br>**THE CONSTRUCT** · The Matrix | [![GARGANTUA](docs/shots/gargantua.webp)](docs/shots/gargantua.webp)<br>**GARGANTUA** · Interstellar | [![THE GRID](docs/shots/thegrid.webp)](docs/shots/thegrid.webp)<br>**THE GRID** · Tron: Legacy |
+| [![TOKYO NIGHT](docs/shots/tokyo.webp)](docs/shots/tokyo.webp)<br>**TOKYO NIGHT** · neo-Tokyo terminal | | |
+
+Full-size shots, palettes, and flavor text in the [gallery](docs/THEMES.md),
+which also documents the shader contract (`u_drive`, `u_heat`, `u_energy`, …)
+if you want to write your own. A theme is a single JS file; PRs welcome, luma
 budgets enforced — this is a dashboard, not a rave.
+
 
 ## Roadmap
 
