@@ -2377,7 +2377,7 @@ async def auth_gate(request, call_next):
 # Version token for immutable static assets; bump when shipping UI changes.
 # HTML is always no-cache (ETag revalidation), so a bump here propagates on
 # the next page load through every layer (nginx, CDN, browser, direct :8801).
-ASSET_VERSION = "20260811c"
+ASSET_VERSION = "20260812m"
 
 
 @app.middleware("http")
