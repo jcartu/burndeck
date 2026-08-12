@@ -12,6 +12,14 @@
 */
 (function(){
   const VERT = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+  /* Firefox ignores powerPreference (dual-GPU MacBooks land on the iGPU) and
+     desynchronized (forces a compositor copy each frame), so the shader costs
+     more per pixel than elsewhere. Clamp the baseline budget down for Firefox.
+     Safari respects powerPreference (lands on the dGPU) but a timeline
+     recording showed 80ms/frame of unaccounted GPU pipeline time — the shader
+     + Canvas2D uploads saturate the GPU. Apply a milder quality clamp. */
+  const IS_FF = CSS.supports('-moz-appearance','none');
+  const IS_SAF = navigator.vendor === 'Apple Computer, Inc.';
 
   class WallpaperRunner {
     constructor(canvas, frag, opts = {}){
@@ -26,6 +34,14 @@
       this.idleDelay = opts.idleDelay || 4000;
       this.quality = Math.min(1, Math.max(0.25, opts.quality || 0.35));
       this.maxPixels = opts.maxPixels || 1200000;
+      if (IS_FF || IS_SAF){
+        this.fps = Math.min(this.fps, 12);
+        this.frameInterval = 1000 / this.fps;
+        this.idleFps = Math.min(this.idleFps, 4);
+        this.idleFrameInterval = 1000 / this.idleFps;
+        this.quality = Math.max(0.2, this.quality * 0.6);
+        this.maxPixels = Math.min(this.maxPixels, 700000);
+      }
       this._base = { fps: this.fps, idleFps: this.idleFps, quality: this.quality };
       this._lite = false;
       /* high-performance: dual-GPU MacBooks must not land on the iGPU.
