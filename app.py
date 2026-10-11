@@ -15,6 +15,7 @@ import hmac
 import json
 import math
 import os
+import platform
 import re
 import secrets
 import subprocess
@@ -1917,7 +1918,7 @@ def build_snapshot() -> dict[str, Any]:
         g["tps"] = per_gpu_tps.get(g["index"], {"input": 0.0, "output": 0.0, "total": 0.0, "models": []})
     snap = {
         "generated_at": utc_iso(),
-        "host": os.uname().nodename,
+        "host": platform.node(),
         "driver": "mock" if MOCK_GPUS else get_driver(),
         "cuda": "" if MOCK_GPUS else get_cuda(),
         "uptime_seconds": uptime_seconds(),
