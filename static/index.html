@@ -11,6 +11,21 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script>/* Calm-path flag — set before <style> parses so html.calm CSS applies
+   without a FOUC. Engaged on Firefox AND Safari: both end up compositor-bound
+   on this dashboard. Firefox re-rasterizes every backdrop-filter blur each
+   frame over the live WebGL canvas (no WebKit-style backdrop cache), software-
+   blurs + uploads, ignores powerPreference + desynchronized on GL contexts,
+   and promotes every will-change:transform animation to its own surface.
+   Safari caches backdrop blur but a 12s timeline recording shows composite
+   alone eating 52% of the 16.67ms 60fps budget (8.66ms/frame) and the page
+   delivering 10fps, not 60 — too many compositing layers over the live canvas.
+   BD_FF is kept separate because only Firefox needs the runner baseline clamp
+   (Safari respects powerPreference and lands on the dGPU on dual-GPU Macs). */
+  window.BD_FF = CSS.supports('-moz-appearance','none');
+  window.BD_SAF = navigator.vendor === 'Apple Computer, Inc.';
+  if (window.BD_FF || window.BD_SAF) document.documentElement.classList.add('calm');
+</script>
 <style>
 :root{
   color-scheme:dark;
@@ -47,6 +62,7 @@ html,body{margin:0;padding:0;background:var(--void);color:var(--text);font-famil
 body{overflow-x:hidden;transition:background-color .8s ease}
 /* ── wallpaper engine layers ── */
 #wp-a,#wp-b{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;opacity:0;transition:opacity 1.15s ease;background:var(--void)}
+body.no-bg #wp-a,body.no-bg #wp-b,body.no-bg .vig{display:none}
 .vig{position:fixed;inset:0;z-index:1;pointer-events:none;
   background:radial-gradient(ellipse at 50% 38%,transparent 30%,rgba(0,0,0,.28) 78%,rgba(0,0,0,.55) 100%)}
 body.theme-light .vig{background:radial-gradient(ellipse at 50% 38%,transparent 40%,rgba(255,255,255,.12) 80%,rgba(190,205,212,.30) 100%)}
@@ -150,7 +166,10 @@ header.top{display:flex;align-items:center;gap:10px 14px;margin-bottom:14px;flex
 
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);position:relative;overflow:hidden;
   transition:background-color .7s,border-color .7s,border-radius .5s}
-.panel::before{content:"";position:absolute;inset:0;border-radius:var(--radius);pointer-events:none;background:linear-gradient(160deg,rgba(255,255,255,.04),transparent 50%)}
+/* ::before gradient removed — it promoted every .panel to its own GPU
+   compositing surface (30+ layers over the live wallpaper), which was the
+   dominant compositor cost in Safari timeline recordings (~82ms/frame of
+   unaccounted GPU time). The visual sheen was a 4% white tint barely visible. */
 
 .section-title{display:flex;align-items:center;gap:9px;font-family:var(--font-head);font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:0 0 8px 0;font-weight:600}
 .section-title::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
@@ -204,8 +223,7 @@ body.theme-light .spec{background:rgba(255,255,255,.4)}
 .model-card .stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
 .model-card .stat .v{font-family:var(--mono);font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .model-card .stat .l{font-family:var(--mono);font-size:8px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.model-card .spark{margin-top:8px;height:28px;display:block;width:100%}
-.model-card .accent-bar{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius) 0 0 var(--radius);
+.model-card .spark{margin-top:8px;height:28px;display:block;width:100%}.model-card .accent-bar{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:var(--radius) 0 0 var(--radius);
   background:linear-gradient(180deg,var(--accent),var(--accent2),var(--accent));background-size:100% 250%;animation:accflow 7s linear infinite}
 @keyframes accflow{0%{background-position:0 0}100%{background-position:0 250%}}
 .model-card.sniffed .status .blip{background:var(--info);box-shadow:0 0 10px var(--info);animation:pulse 2s infinite}
@@ -362,7 +380,7 @@ body.theme-light .spark-card{background:rgba(255,255,255,.35)}
 .spark-card .h{display:flex;justify-content:space-between;gap:6px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.1px;text-transform:uppercase;margin-bottom:3px}
 .spark-card .h span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spark-card .h .v{color:var(--text);font-weight:700;white-space:nowrap}
-.spark-card canvas{display:block;width:100%;height:30px}
+.spark-card canvas,.spark-card svg{display:block;width:100%;height:30px}
 
 .procs{margin-top:10px;max-height:158px;overflow:auto;scrollbar-width:thin}
 .procs table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
@@ -438,6 +456,29 @@ body.perf-lite .loadprog .fill::after{animation:none}
 @media(prefers-reduced-motion:reduce){
   .kpi::after,.spec::after,.bar .fill::after,.loadprog .fill::after,.model-card.healthy .crest,.accent-bar{animation:none}
 }
+/* ── firefox: permanent calm path. Same disease as perf-lite but pinned,
+   because Firefox re-blurs every frosted panel over the live WebGL canvas
+   every frame (the SSE tick invalidates the backdrop 4×/s) and ignores the
+   GL fast-path hints the runner sets. Strip the frosted glass and every
+   always-on decorative animation; keep event-triggered ones (sweep, toastin,
+   menuin, bump) since those fire rarely and carry no steady-state cost. ── */
+html.calm .panel,html.calm .kpi,html.calm .btn,html.calm .ev,
+html.calm #theme-menu,html.calm .procs th{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.calm .kpi::after,html.calm .spec::after,html.calm .accent-bar,
+html.calm .model-card.healthy .crest,html.calm .bar .fill::after,
+html.calm .loadprog .fill::after,
+html.calm .brand .dot,html.calm .live-dot,
+html.calm .model-card.healthy .status .blip,
+html.calm .model-card.sniffed .status .blip,
+html.calm .model-card.sniffed.loading .status .blip,
+html.calm .loadprog .stage.on,
+html.calm .thermo.hot .bub,html.calm .thermo.fire svg,
+html.calm .thermo.fire .t-read,html.calm .gpu-card.pcie-degraded{animation:none!important}
+/* Calm path: with backdrop-filter already off, L (perf-lite) would be a
+   no-op. Give it a visible effect — fade the wallpaper down so the busy
+   shader stops showing through the translucent cards. */
+html.calm body.perf-lite #wp-a,html.calm body.perf-lite #wp-b{opacity:0!important}
+html.calm body.perf-lite .vig{background:var(--void)}
 </style>
 </head>
 <body>
@@ -491,7 +532,7 @@ body.perf-lite .loadprog .fill::after{animation:none}
   <div class="gpu-grid" id="gpus"></div>
 
   <footer>
-    burndeck · <span id="ft-rates">— Hz GPU · — Hz LLM</span> · read-only telemetry<span id="ft-demo" hidden> · synthetic demo feed</span> · theme <b id="ft-theme">—</b><span id="ft-lite" hidden> · <b>LITE</b></span><span class="kbd-hint"> · <b>W</b> shift · <b>S</b> menu · <b>D</b> density · <b>L</b> lite · <b>F</b> fullscreen</span>
+    burndeck · <span id="ft-rates">— Hz GPU · — Hz LLM</span> · read-only telemetry<span id="ft-demo" hidden> · synthetic demo feed</span> · theme <b id="ft-theme">—</b><span id="ft-lite" hidden> · <b>LITE</b></span><span id="ft-throttle" hidden></span><span class="kbd-hint"> · <b>W</b> shift · <b>S</b> menu · <b>D</b> density · <b>L</b> lite · <b>B</b> background · <b>G</b> 4→2Hz · <b>F</b> fullscreen</span>
     <span class="dedication">built with <span class="heart">♥</span> for the RTX6KPro Discord Family</span>
   </footer>
 </div>
@@ -503,7 +544,7 @@ body.perf-lite .loadprog .fill::after{animation:none}
 
 <script src="static/themes/runner.js?v=20260811c"></script>
 <script>
-const ASSET_VER = '20260811c';
+const ASSET_VER = '20260812m';
 const $ = (id) => document.getElementById(id);
 const setHTML = (el, html) => {
   if (el.__bdHTML !== html){ el.innerHTML = html; el.__bdHTML = html; }
@@ -622,7 +663,7 @@ const Engine = (() => {
     let r;
     try { r = new WallpaperRunner(layers[nextIdx], th.frag, Object.assign({ scale:0.85 }, th.perf || {})); }
     catch(e){ console.warn('theme shader failed:', id, e.message); return false; }
-    r.start();
+    if (bgOn) r.start();
     r.pulse(0.7); // arrival pulse
     if (liteMode && r.setLite) r.setLite(true);
     layerRunners[nextIdx] = r;
@@ -698,6 +739,8 @@ const Engine = (() => {
     if (e.key === 'f' || e.key === 'F') FS.toggle();
     if (e.key === 'd' || e.key === 'D') Density.toggle();
     if (e.key === 'l' || e.key === 'L') PerfGov.toggle();
+    if (e.key === 'b' || e.key === 'B') Engine.bgToggle();
+    if (e.key === 'g' || e.key === 'G') ThrottleGov_toggle();
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= 9){ const list = available(); if (list[n-1]) show(list[n-1]); }
     if (e.key === '0'){ const list = available(); if (list[9]) show(list[9]); }
@@ -707,10 +750,26 @@ const Engine = (() => {
     liteMode = !!v;
     for (const r of layerRunners) if (r && r.setLite) r.setLite(liteMode);
   }
+  /* wallpaper visibility: stop the GL runners and hide the canvas layers
+     (cards stay; this is the cheapest possible "no background" mode). */
+  let bgOn = true;
+  function bg(v){
+    v = !!v;
+    if (bgOn === v) return;
+    bgOn = v;
+    document.body.classList.toggle('no-bg', !v);
+    for (const r of layerRunners){
+      if (!r) continue;
+      if (v) r.start(); else r.stop();
+    }
+    try { localStorage.setItem('burndeck-bg', v ? 'on' : 'off'); } catch(e){}
+  }
+  function bgToggle(){ bg(!bgOn); }
+  try { if (localStorage.getItem('burndeck-bg') === 'off') bg(false); } catch(e){}
   $('btn-theme').addEventListener('click', () => toggleMenu());
   $('btn-theme').addEventListener('contextmenu', e => { e.preventDefault(); cycle(1); });
   $('btn-logout').addEventListener('click', () => location.href = 'api/logout');
-  return { init, cycle, pulse, drive, heat, show, toggleMenu, lite, refresh: renderMenu };
+  return { init, cycle, pulse, drive, heat, show, toggleMenu, lite, bg, bgToggle, refresh: renderMenu };
 })();
 
 /* ════════ DEVICE MODE + FULLSCREEN ════════ */
@@ -862,14 +921,31 @@ function loadTheme(id, done, priority){
 })();
 
 /* ────── sparkline / line chart helpers ────── */
-function drawLine(canvas, data, color, fillColor, opts={}){
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = canvas.clientHeight;
+/* Two backends share one entry point:
+   - SVG (used for per-card sparklines): renders inline as part of the parent
+     panel's compositing layer — no separate GPU surface per sparkline. With
+     8 GPUs × 4 sparks + N model cards that's 30+ surfaces eliminated. Uses a
+     fixed viewBox so no clientWidth read is needed (no forced reflow risk).
+   - Canvas (used for the 2 global charts): richer rendering (gradient fill,
+     glow understroke) worth the 2 extra surfaces.
+   Calm-path browsers (Firefox + Safari) gate Canvas2D repaints to every other
+   pass (2 Hz) — 30+ canvases at 4 Hz was a major GPU texture-upload cost. SVG
+   sparks are cheap enough to redraw every pass. */
+let _renderPass = 0, _ffDrawOk = true, _cssDirty = true;
+function drawLine(target, data, color, fillColor, opts={}){
+  if (target && target.tagName === 'svg') return drawSvgLine(target, data, color, fillColor, opts);
+  if (!_ffDrawOk) return;   /* previous frame's pixels stay — no flicker */
+  const dpr = 1;
+  let w, h;
+  if (_cssDirty || !target._cssW){
+    w = target.clientWidth; h = target.clientHeight;
+    target._cssW = w; target._cssH = h;
+  } else { w = target._cssW; h = target._cssH; }
   if (!w || !h) return;
-  if (canvas.width !== w*dpr || canvas.height !== h*dpr){
-    canvas.width = w*dpr; canvas.height = h*dpr;
+  if (target.width !== w*dpr || target.height !== h*dpr){
+    target.width = w*dpr; target.height = h*dpr;
   }
-  const ctx = canvas.getContext('2d');
+  const ctx = target.getContext('2d');
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,h);
   if (!data || data.length < 2) return;
@@ -908,6 +984,40 @@ function drawLine(canvas, data, color, fillColor, opts={}){
   ctx.stroke();
   const lx = xs(data.length-1), ly = ys(data[data.length-1]);
   ctx.fillStyle = color; ctx.beginPath(); ctx.arc(lx,ly,2.6,0,Math.PI*2); ctx.fill();
+}
+/* SVG sparkline backend — fixed viewBox means no layout reads, and inline SVG
+   renders as part of the parent panel's compositing layer (zero extra GPU
+   surfaces, vs one per <canvas>). preserveAspectRatio="none" lets the SVG
+   scale to any CSS box size without us re-reading dimensions. */
+const SVG_VB_W = 100, SVG_VB_H = 30;
+function drawSvgLine(svg, data, color, fillColor, opts={}){
+  if (!data || data.length < 2){ if (svg.dataset.empty !== '1'){ svg.innerHTML=''; svg.dataset.empty='1'; } return; }
+  svg.dataset.empty = '0';
+  let min = opts.min ?? Math.min(...data);
+  let max = opts.max ?? Math.max(...data);
+  if (max - min < 1e-6) max = min + 1;
+  if (opts.zeroBase) min = 0;
+  const w = SVG_VB_W, h = SVG_VB_H, pad = 3;
+  const xs = (i) => pad + (w - pad*2) * (i/(data.length-1));
+  const ys = (v) => h - pad - (h - pad*2) * ((v - min)/(max - min));
+  let line = '';
+  for (let i=0;i<data.length;i++){
+    const x = xs(i).toFixed(2), y = ys(data[i]).toFixed(2);
+    line += (i===0?'M':'L') + x + ',' + y + ' ';
+  }
+  let html = '';
+  if (fillColor){
+    const fillPath = `M${xs(0).toFixed(2)},${h} ` + line.slice(1) + `L${xs(data.length-1).toFixed(2)},${h} Z`;
+    html += `<path d="${fillPath}" fill="${fillColor}" stroke="none"/>`;
+  }
+  /* glow understroke (matches canvas version) */
+  if (!UI.light && !PerfGov.lite){
+    html += `<path d="${line}" fill="none" stroke="${hexA(color,.30)}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  html += `<path d="${line}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  const lx = xs(data.length-1).toFixed(2), ly = ys(data[data.length-1]).toFixed(2);
+  html += `<circle cx="${lx}" cy="${ly}" r="2.6" fill="${color}"/>`;
+  if (svg.innerHTML !== html) svg.innerHTML = html;
 }
 const hexA = (hex, a) => {
   const [r,g,b] = [0,2,4].map(i=>parseInt(hex.replace('#','').slice(i,i+2),16));
@@ -1035,10 +1145,10 @@ function gpuCardTemplate(g){
         <div class="bar tps"><div class="row"><span class="label">TPS share</span><span class="value">0 tok/s</span></div><div class="track"><div class="fill"></div></div></div>
       </div>
       <div class="spark-row">
-        <div class="spark-card"><div class="h"><span>Util</span><span class="v" data-role="util-pk">—</span></div><canvas data-role="spark-util"></canvas></div>
-        <div class="spark-card"><div class="h"><span>Mem</span><span class="v" data-role="mem-pk">—</span></div><canvas data-role="spark-mem"></canvas></div>
-        <div class="spark-card"><div class="h"><span>Power</span><span class="v" data-role="pwr-pk">—</span></div><canvas data-role="spark-pwr"></canvas></div>
-        <div class="spark-card"><div class="h"><span>Temp</span><span class="v" data-role="tmp-pk">—</span></div><canvas data-role="spark-tmp"></canvas></div>
+        <div class="spark-card"><div class="h"><span>Util</span><span class="v" data-role="util-pk">—</span></div><svg data-role="spark-util" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+        <div class="spark-card"><div class="h"><span>Mem</span><span class="v" data-role="mem-pk">—</span></div><svg data-role="spark-mem" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+        <div class="spark-card"><div class="h"><span>Power</span><span class="v" data-role="pwr-pk">—</span></div><svg data-role="spark-pwr" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
+        <div class="spark-card"><div class="h"><span>Temp</span><span class="v" data-role="tmp-pk">—</span></div><svg data-role="spark-tmp" viewBox="0 0 100 30" preserveAspectRatio="none"></svg></div>
       </div>
       <div class="procs">
         <table>
@@ -1057,7 +1167,7 @@ const gpuObserver = 'IntersectionObserver' in window ? new IntersectionObserver(
     if (entry.isIntersecting){
       visibleGpuCards.add(entry.target);
       const gpu = lastSnap && lastSnap.gpus.find(g => String(g.index) === entry.target.dataset.idx);
-      if (gpu) drawGpuCharts(entry.target, gpu);
+      if (gpu){ _ffDrawOk = true; drawGpuCharts(entry.target, gpu); }
     } else {
       visibleGpuCards.delete(entry.target);
     }
@@ -1276,7 +1386,7 @@ function modelCardTemplate(m){
       <div class="stat"><div class="v" data-role="wait">0</div><div class="l">queue</div></div>
       <div class="stat"><div class="v" data-role="kv">0%</div><div class="l">kv</div></div>
     </div>
-    <canvas class="spark" data-role="spark"></canvas>
+    <svg class="spark" data-role="spark" viewBox="0 0 100 30" preserveAspectRatio="none"></svg>
   </div>`;
 }
 
@@ -1479,11 +1589,18 @@ const _kpiPrev = {};
 function setKpi(id, html, key, val){
   const el = $(id);
   setHTML(el, html);
-  // bump animation on meaningful change
+  // bump animation on meaningful change — use Web Animations API to avoid the
+  // synchronous reflow that `void el.offsetWidth` triggers (98 forced-layouts
+  // in a 12s Safari timeline recording, ~8 per frame).
   const prev = _kpiPrev[key];
   if (prev !== undefined && Math.abs(val - prev) > Math.max(1, prev * 0.15)){
     const kpi = el.closest('.kpi');
-    kpi.classList.remove('bump'); void kpi.offsetWidth; kpi.classList.add('bump');
+    if (kpi && kpi.animate){
+      kpi.animate(
+        [{ transform:'scale(1)' }, { transform:'scale(1.12)', offset:.35 }, { transform:'scale(1)' }],
+        { duration:450, easing:'cubic-bezier(.2,.9,.3,1.4)' }
+      );
+    }
   }
   _kpiPrev[key] = val;
 }
@@ -1492,7 +1609,12 @@ function renderHeader(snap){
   const u = fmtSecs(snap.uptime_seconds);
   setText($('hostline'), `${snap.host} · driver ${snap.driver||'—'} · cuda ${snap.cuda||'—'} · uptime ${u} · ${snap.generated_at.slice(11,19)}Z`);
   if (snap.host && document.title !== 'burndeck · ' + snap.host) document.title = 'burndeck · ' + snap.host;
-  if (snap.poll_seconds) setText($('ft-rates'), `${(1/snap.poll_seconds).toFixed(0)} Hz GPU · ${(1/(snap.llm_poll_seconds||1)).toFixed(0)} Hz LLM`);
+  if (snap.poll_seconds){
+    const feedHz = (1/snap.poll_seconds).toFixed(0);
+    const llmHz = (1/(snap.llm_poll_seconds||1)).toFixed(0);
+    const renderHz = _throttleHz > 0 ? _throttleHz : feedHz;
+    setText($('ft-rates'), `${renderHz} Hz GPU${_throttleHz > 0 ? ` (feed ${feedHz})` : ''} · ${llmHz} Hz LLM`);
+  }
   const t = snap.totals;
   setKpi('kpi-tps', `${fmt(t.total_tps,1)}<span class="unit">tok/s</span>`, 'tps', t.total_tps);
   setKpi('kpi-out', `${fmt(t.output_tps,1)}<span class="unit">tok/s</span>`, 'out', t.output_tps);
@@ -1676,6 +1798,12 @@ function loadDemo(){
 
 function render(snap, force){
   lastSnap = snap;
+  _renderPass++;
+  /* Calm-path browsers (Firefox + Safari): gate Canvas2D repaints to every
+     other pass (2 Hz); force draws (resize, theme shift) always draw. Each
+     skipped canvas means one fewer GPU texture upload — 30+ sparklines at
+     4 Hz was the dominant GPU pipeline cost in a Safari timeline recording. */
+  _ffDrawOk = (!window.BD_FF && !window.BD_SAF) || !!force || (_renderPass % 2 === 1);
   Density.auto((snap.gpus || []).length);
   /* wallpaper drive: power-gate utilization so busy-wait kernels (100% util at
      idle wattage, e.g. NCCL barriers) don't summon the storm */
@@ -1693,6 +1821,7 @@ function render(snap, force){
   if (historyChanged) renderedHistoryVersion = historyVersion;
   if (modelsChanged) renderedModelsVersion = modelsVersion;
   dirtyGpuIndices = new Set();
+  _cssDirty = false;   /* canvas CSS sizes are now current until next resize */
 }
 
 /* connect via SSE with snapshot fallback + staleness watchdog: if the stream
@@ -1757,16 +1886,58 @@ function mergeStreamFrame(frame){
 }
 
 let renderRaf = 0, pendingRender = null;
+/* Render throttle (G): cycles 4 Hz (feed rate, no cap) → 2 Hz → 1 Hz → 4 Hz.
+   The latest snapshot is always held; we just defer the paint. Reducing the
+   render rate cuts composite + style-recalc work linearly — on calm-path
+   browsers with the background off this is the last lever toward 60fps. */
+let _throttleHz = 0;            /* 0 = off (feed rate), else Hz cap */
+let _lastRenderAt = 0, _throttleTimer = 0;
+const THROTTLE_STEPS = [0, 2];  /* cycle order: off → 2 → off (1Hz regresses: GPU pipeline goes cold) */
+function _throttleMs(){ return _throttleHz ? 1000 / _throttleHz : 0; }
+function ThrottleGov_get(){ return _throttleHz; }
+function ThrottleGov_set(hz, persist){
+  if (_throttleHz === hz) return;
+  _throttleHz = hz;
+  if (persist){ try { localStorage.setItem('burndeck-throttle', String(hz)); } catch(e){} }
+  document.body.classList.toggle('throttle', hz > 0);
+  $('ft-throttle').hidden = hz === 0;
+  if (hz > 0) $('ft-throttle').textContent = ' · ' + hz + 'Hz';
+  if (lastSnap) renderHeader(lastSnap);   /* refresh footer rates immediately */
+  /* drain any pending throttled frame immediately on disengage */
+  if (hz === 0 && pendingRender && !renderRaf) scheduleRender(pendingRender);
+}
+function ThrottleGov_toggle(){
+  const i = THROTTLE_STEPS.indexOf(_throttleHz);
+  ThrottleGov_set(THROTTLE_STEPS[(i + 1) % THROTTLE_STEPS.length], true);
+}
+try {
+  const saved = localStorage.getItem('burndeck-throttle');
+  if (saved && saved !== '0' && saved !== 'off') ThrottleGov_set(saved === 'on' ? 2 : parseInt(saved,10) || 2, false);
+} catch(e){}
 function scheduleRender(snap){
   pendingRender = snap;
   if (renderRaf) return;
+  if (_throttleHz > 0){
+    const now = performance.now();
+    const elapsed = now - _lastRenderAt;
+    const ms = _throttleMs();
+    if (elapsed < ms){
+      if (!_throttleTimer){
+        _throttleTimer = window.setTimeout(() => {
+          _throttleTimer = 0;
+          if (!renderRaf && pendingRender) scheduleRender(pendingRender);
+        }, ms - elapsed + 1);
+      }
+      return;
+    }
+  }
   PerfGov.reqMark();
   renderRaf = requestAnimationFrame(() => {
     PerfGov.frameMark();
     renderRaf = 0;
     const next = pendingRender;
     pendingRender = null;
-    if (next) render(next, false);
+    if (next){ _lastRenderAt = performance.now(); render(next, false); }
   });
 }
 
@@ -1808,6 +1979,7 @@ window.addEventListener('resize', () => {
   if (resizeRaf) return;
   resizeRaf = requestAnimationFrame(() => {
     resizeRaf = 0;
+    _cssDirty = true;
     if (lastSnap) render(lastSnap, true);
   });
 });
