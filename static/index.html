@@ -542,7 +542,7 @@ html.calm body.perf-lite .vig{background:var(--void)}
   <div class="tm-list"></div>
 </div>
 
-<script src="static/themes/runner.js?v=20260811c"></script>
+<script src="static/themes/runner.js?v=20260812m"></script>
 <script>
 const ASSET_VER = '20260812m';
 const $ = (id) => document.getElementById(id);
@@ -935,7 +935,7 @@ let _renderPass = 0, _ffDrawOk = true, _cssDirty = true;
 function drawLine(target, data, color, fillColor, opts={}){
   if (target && target.tagName === 'svg') return drawSvgLine(target, data, color, fillColor, opts);
   if (!_ffDrawOk) return;   /* previous frame's pixels stay — no flicker */
-  const dpr = 1;
+  const dpr = (window.BD_FF || window.BD_SAF) ? 1 : (window.devicePixelRatio || 1);
   let w, h;
   if (_cssDirty || !target._cssW){
     w = target.clientWidth; h = target.clientHeight;
